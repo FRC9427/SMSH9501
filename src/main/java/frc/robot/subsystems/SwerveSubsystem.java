@@ -77,7 +77,7 @@ public class SwerveSubsystem extends SubsystemBase {
             DriveConstants.kBackRightAbsoluteEncoderOffsetRad,
             DriveConstants.kBackRightDriveAbsoluteEncoderReversed);
     private final AHRS gyro = new AHRS(SPI.Port.kMXP);
-    
+    private ChassisSpeeds m_robotRelativeChassisSpeeds = new ChassisSpeeds();
     StructArrayPublisher<SwerveModuleState> publisher = NetworkTableInstance.getDefault()
     .getStructArrayTopic("MyStates", SwerveModuleState.struct).publish();
     private final Translation2d m_frontLeftLocate = new Translation2d((Constants.DriveConstants.kWheelBase) / 2, (Constants.DriveConstants.kTrackWidth) / 2);
@@ -93,8 +93,7 @@ public class SwerveSubsystem extends SubsystemBase {
             frontLeft.getPosition(),
             frontRight.getPosition(),
             backLeft.getPosition(),
-            backRight.getPosition()},
-            new Pose2d(5.0, 13.5, new Rotation2d()));
+            backRight.getPosition()});
             
     public SwerveSubsystem() {
         new Thread(() -> {
@@ -112,11 +111,11 @@ public class SwerveSubsystem extends SubsystemBase {
     }
 
     public double getHeading() {
-        return gyro.getAngle();
+        return gyro.getYaw();
     }
 
     public Rotation2d getRotation2d() {
-        return Rotation2d.fromDegrees(getHeading());
+        return gyro.getRotation2d();
     }
 
     public Pose2d getPose(){
@@ -197,12 +196,12 @@ public class SwerveSubsystem extends SubsystemBase {
     }
 
     public ChassisSpeeds getRobotVelocity() {
-        return m_kinematics.toChassisSpeeds(this.getSweveModuleStates());
+        return  m_robotRelativeChassisSpeeds;
     }
 
     public void driveChassisSpeeds(ChassisSpeeds chassisSpeeds) {
         SwerveModuleState[] moduleStates = m_kinematics.toSwerveModuleStates(chassisSpeeds);
-        setModuleStates(moduleStates);
+        this.setModuleStates(moduleStates);
     }
 
         public void resetPose(Pose2d pose) {
@@ -229,15 +228,5 @@ public class SwerveSubsystem extends SubsystemBase {
             },
             this
         );
-    }
-
-    public Command getAutonomousCommand(String pathName, boolean setOdomToStart)
-    {
-      PathPlannerPath path = PathPlannerPath.fromPathFile(pathName);
-      if (setOdomToStart)
-      {
-        resetOdomtry(new Pose2d());
-      }
-      return AutoBuilder.followPath(path);
     }
 }
